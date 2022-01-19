@@ -1,11 +1,6 @@
-## My Project
+## Digital Assets Examples
 
-TODO: Fill this README out!
-
-Be sure to:
-
-* Change the title in this README
-* Edit your repository description on GitHub
+This repo contains AWS examples for digital assets use cases.  
 
 ## Security
 

@@ -1,0 +1,128 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Deploy a service on AWS Fargate, hosted in a private subnet, but accessible via a public load balancer.
+Parameters:
+  StackName:
+    Type: String
+    Default: Bitcoin
+    Description: The name of the parent Fargate networking stack that you created. Necessary
+                 to locate and reference resources created by that stack.
+  ServiceName:
+    Type: String
+    Default: node
+    Description: A name for the service
+  ImageUrl:
+    Type: String
+    Description: The url of a docker image that contains the application process that
+                 will handle the traffic for this service
+  SSHPublicKey:
+    Type: String
+    Description: SSHPublicKey
+  ServerCrt:
+    Type: String
+    Description: ServerCrt
+  ServerKey:
+    Type: String
+    Description: ServerKey
+  ContainerPort:
+    Type: Number
+    Default: 22
+    Description: What port number the application inside the docker container is binding to
+  ContainerCpu:
+    Type: Number
+    Default: 2048
+    Description: How much CPU to give the container. 1024 is 1 CPU
+  ContainerMemory:
+    Type: Number
+    Default: 16384
+    Description: How much memory in megabytes to give the container
+  DesiredCount:
+    Type: Number
+    Default: 1
+    Description: How many copies of the service task to run
+  Role:
+    Type: String
+    Default: ""
+    Description: (Optional) An IAM role to give the service's containers if the code within needs to
+                 access other AWS resources like S3 buckets, DynamoDB tables, etc
+
+Resources:
+
+  # The task definition. This is a simple metadata description of what
+  # container to run, and what resource requirements it has.
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Ref 'ServiceName'
+      Cpu: !Ref 'ContainerCpu'
+      Memory: !Ref 'ContainerMemory'
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      ExecutionRoleArn:
+        Fn::ImportValue:
+          !Join ['-', [!Ref 'StackName', 'ECSTaskExecutionRole']]
+      TaskRoleArn:
+        Fn::ImportValue:
+          !Join ['-', [!Ref 'StackName', 'BitcoinExecutionRole-ARN']]
+      Volumes:
+        - Name: efsdata
+          EFSVolumeConfiguration:
+            FileSystemId:
+              Fn::ImportValue:
+                !Join ['-', [!Ref 'StackName', 'EFS']]
+      ContainerDefinitions:
+        - Name: !Ref 'ServiceName'
+          Cpu: !Ref 'ContainerCpu'
+          Memory: !Ref 'ContainerMemory'
+          Image: !Ref 'ImageUrl'
+          PortMappings:
+            - ContainerPort: !Ref 'ContainerPort'
+            - ContainerPort: 50002
+          MountPoints:
+            - ContainerPath: /root/bitcoin_data
+              SourceVolume: efsdata
+          Ulimits:
+            - HardLimit: 65536
+              Name: nofile
+              SoftLimit: 65536
+          Environment:
+            - Name: AWS_DEFAULT_REGION
+              Value: !Ref 'AWS::Region'
+            - Name: SSH_PUBLIC_KEY
+              Value: !Ref 'SSHPublicKey'
+            - Name: SERVER_CRT
+              Value: !Ref 'ServerCrt'
+            - Name: SERVER_KEY
+              Value: !Ref 'ServerKey'
+          LogConfiguration:
+            LogDriver: 'awslogs'
+            Options:
+              awslogs-group: bitcoin
+              awslogs-region: !Ref 'AWS::Region'
+              awslogs-stream-prefix: bitcoin_node
+
+  # The service. The service is a resource which allows you to run multiple
+  # copies of a type of task, and gather up their logs and metrics, as well
+  # as monitor the number of running tasks and replace any that have crashed
+  Service:
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName: !Ref 'ServiceName'
+      Cluster:
+        Fn::ImportValue:
+          !Join ['-', [!Ref 'StackName', 'ECSCluster']]
+      LaunchType: FARGATE
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 75
+      DesiredCount: !Ref 'DesiredCount'
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          SecurityGroups:
+            - Fn::ImportValue:
+                !Join ['-', [!Ref 'StackName', 'ECSHostSecurityGroup']]
+          Subnets:
+            - Fn::ImportValue:
+                !Join ['-', [!Ref 'StackName', 'PublicSubnet1']]
+      TaskDefinition: !Ref 'TaskDefinition'
