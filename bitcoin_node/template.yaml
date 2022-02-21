@@ -207,10 +207,6 @@ Resources:
       GroupDescription: Access to the ECS hosts and the tasks/containers that run on them
       SecurityGroupIngress:
         - IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
           FromPort: 50002
           ToPort: 50002
           CidrIp: 0.0.0.0/0
@@ -266,33 +262,6 @@ Resources:
         - !Ref PublicSubnet1
         - !Ref PublicSubnet2
       Type: network
-      
-  TargetGroup:
-    Type: AWS::ElasticLoadBalancingV2::TargetGroup
-    Properties:
-      TargetType: ip
-      Port: 22
-      Protocol: TCP
-      HealthCheckEnabled: True
-      HealthCheckIntervalSeconds: 10
-      HealthCheckPort: 22
-      HealthCheckProtocol: TCP
-      HealthCheckTimeoutSeconds: 10
-      HealthyThresholdCount: 3
-      TargetGroupAttributes:
-        - Key: deregistration_delay.timeout_seconds
-          Value: 60
-      VpcId: !Ref 'VPC'
-      
-  NetworkLoadBalancerListener:
-    Type: AWS::ElasticLoadBalancingV2::Listener
-    Properties:
-      DefaultActions:
-      - Type: forward
-        TargetGroupArn: !Ref TargetGroup
-      LoadBalancerArn: !Ref NetworkLoadBalancer
-      Port: 22
-      Protocol: TCP
         
   TargetGroupElectrum:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
