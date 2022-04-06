@@ -23,4 +23,4 @@ echo $fullname
 SERVER_CRT="`cat server.crt`"
 SERVER_KEY="`cat server.key`"
 
-aws cloudformation deploy --template-file $1 --stack-name bitcoin-node --parameter-overrides ImageUrl=$fullname ServerCrt="$SERVER_CRT" ServerKey="$SERVER_KEY"
+aws cloudformation deploy --template-file $1 --stack-name bitcoin-service --parameter-overrides ImageUrl=$fullname ServerCrt="$SERVER_CRT" ServerKey="$SERVER_KEY"

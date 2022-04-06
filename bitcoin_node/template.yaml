@@ -269,7 +269,7 @@ Resources:
       TargetType: ip
       Port: 50002
       Protocol: TCP
-      HealthCheckEnabled: False
+      HealthCheckEnabled: true
       HealthCheckIntervalSeconds: 10
       HealthCheckPort: 50002
       HealthCheckProtocol: TCP
@@ -385,13 +385,13 @@ Outputs:
       
   NLBListener:
     Description: NLBListener
-    Value: !Ref NetworkLoadBalancerListener
+    Value: !Ref NetworkLoadBalancerListenerElectrum
     Export:
       Name: Bitcoin-NLBListener
 
   NLBTargetGroup:
     Description: TargetGroup
-    Value: !Ref TargetGroup
+    Value: !Ref TargetGroupElectrum
     Export:
       Name: Bitcoin-TargetGroup
       
