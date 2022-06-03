@@ -269,7 +269,7 @@ Resources:
       TargetType: ip
       Port: 50002
       Protocol: TCP
-      HealthCheckEnabled: true
+      HealthCheckEnabled: false
       HealthCheckIntervalSeconds: 10
       HealthCheckPort: 50002
       HealthCheckProtocol: TCP
