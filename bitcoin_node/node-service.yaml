@@ -22,7 +22,7 @@ Parameters:
     Description: ServerKey
   ContainerPort:
     Type: Number
-    Default: 22
+    Default: 50002
     Description: What port number the application inside the docker container is binding to
   ContainerCpu:
     Type: Number
