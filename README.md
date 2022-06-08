@@ -16,6 +16,7 @@ This repo contains AWS examples for digital assets use cases.
 * sam build --template-file template.yaml
 * sam deploy --guided --template-file template.yaml # specify bitcoin-app as Stack name
 * ./deploy_image.sh
+* ssh-keygen -t rsa
 * ./deploy_service.sh node-service.yaml
 
 ## Security

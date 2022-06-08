@@ -1,5 +1,8 @@
 #!/bin/sh
 
+echo "start ssh"
+/root/docker-ssh.sh &
+
 # bitcoind rpcauth
 python3 /root/rpcauth.py bitcoinrpc > rpc.txt
 cat rpc.txt | grep rpcauth >> /root/bitcoin.conf 
