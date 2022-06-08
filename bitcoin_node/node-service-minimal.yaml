@@ -14,6 +14,9 @@ Parameters:
     Type: String
     Description: The url of a docker image that contains the application process that
                  will handle the traffic for this service
+  SSHPublicKey:
+    Type: String
+    Description: SSHPublicKey
   ServerCrt:
     Type: String
     Description: ServerCrt
@@ -85,6 +88,8 @@ Resources:
           Environment:
             - Name: AWS_DEFAULT_REGION
               Value: !Ref 'AWS::Region'
+            - Name: SSH_PUBLIC_KEY
+              Value: !Ref 'SSHPublicKey'
             - Name: SERVER_CRT
               Value: !Ref 'ServerCrt'
             - Name: SERVER_KEY
