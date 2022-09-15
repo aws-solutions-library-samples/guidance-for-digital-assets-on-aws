@@ -6,9 +6,16 @@ This open-source solution pulls data from the public Bitcoin and Ethereum blockc
 
 ![chart](architecture.png)
 
-Go the the relevant section:
-- How to consume this data from AWS [here](consumer/README.md)  
-- How to setup this solution in your own AWS account [here](producer/README.md)
+### How to consume this data from AWS
+
+To consume this data, run the following AWS CloudFormation template in your AWS Account:
+
+[Deploy Stack](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/new?stackName=aws-public-blockchain&templateURL=https://aws-blogs-artifacts-public.s3.amazonaws.com/artifacts/DBBLOG-2500/aws-public-blockchain.yaml)
+ 
+
+### How to setup this solution in your own AWS account 
+
+Follow the instructions from [here](producer/README.md)
 
 ## Security
 
