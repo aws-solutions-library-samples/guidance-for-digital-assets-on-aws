@@ -1,0 +1,4 @@
+boto3
+awswrangler
+pandas
+requests

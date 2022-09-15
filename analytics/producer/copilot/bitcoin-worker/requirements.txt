@@ -1,0 +1,5 @@
+boto3
+awswrangler
+requests
+pandas
+dynamodb-json

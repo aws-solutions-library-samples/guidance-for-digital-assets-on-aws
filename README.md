@@ -1,23 +1,24 @@
-## Digital Assets Examples
+# Digital Assets Examples
 
-This repo contains AWS examples for digital assets use cases.  
+This repo contains examples for public blockchain and digital assets use cases on AWS. 
+
+## Analytics
+
+This solution pulls data from the public Bitcoin and Ethereum blockchains and normalizes data into tabular data structures for blocks, transactions, and additional tables for data inside a block. The data is provided as parquet files partioned by date to provide an easy query interface through tools like Amazon Athena, Amazon Redshift, and Amazon SageMaker.
 
 
-### Setup of Bitcoin Full Node and Electrum Server
+![chart](analytics/architecture.png)
 
-1. Setup Cloud9 IDE with instance type  "t3.medium"
-2. Run the following commands in Cloud9 Terminal window:
-* cd ~/environments
-* git clone https://github.com/aws-samples/digital-assets-examples.git
-* cd digital-assets-examples/bitcoin_node
-* openssl genrsa -out server.key 2048
-* openssl req -new -key server.key -out server.csr
-* openssl x509 -req -days 1825 -in server.csr -signkey server.key -out server.crt
-* sam build --template-file template.yaml
-* sam deploy --guided --template-file template.yaml # specify bitcoin-app as Stack name
-* ./deploy_image.sh
-* ssh-keygen -t rsa
-* ./deploy_service.sh node-service.yaml
+
+Go [here](analytics/README.md) to find out more how to consume this data from AWS or how to set it up in your own AWS account.
+
+## Payments
+
+- Blog Post "Experimenting with Bitcoin Blockchain on AWS": https://aws.amazon.com/blogs/industries/experimenting-with-bitcoin-blockchain-on-aws/
+
+![chart](payments/architecture.png)
+
+You can find more details [here](payments/README.md).
 
 ## Security
 
@@ -26,4 +27,3 @@ See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more inform
 ## License
 
 This library is licensed under the MIT-0 License. See the LICENSE file.
-

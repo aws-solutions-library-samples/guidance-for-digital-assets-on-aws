@@ -1,0 +1,34 @@
+# The manifest for the "bitcoin-core-feed" service.
+# Read the full specification for the "Backend Service" type at:
+#  https://aws.github.io/copilot-cli/docs/manifest/backend-service/
+
+# Your service name will be used in naming your resources like log groups, ECS services, etc.
+name: ethereum-feed
+type: Backend Service
+
+# Your service does not allow any traffic.
+
+# Configuration for your containers and service.
+image:
+  # Docker build arguments. For additional overrides: https://aws.github.io/copilot-cli/docs/manifest/backend-service/#image-build
+  build: copilot/ethereum-feed/Dockerfile
+  port: 8080
+
+cpu: 1024       # Number of CPU units for the task.
+memory: 2048    # Amount of memory in MiB used by the task.
+count: 1       # Number of tasks that should be running in your service.
+exec: true     # Enable running commands in your container.
+
+deployment: # The deployment strategy
+  rolling: 'recreate' # Stops existing tasks before new ones are started for faster deployments.
+
+variables:                    
+  SCHEMA_VERSION: 'v1.0'
+
+secrets:
+  S3_BUCKET: '/copilot/applications/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/public-blockchain-data-s3bucket'
+  ETH_LISTENER: '/copilot/applications/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/ethereum-listener'
+
+publish:
+  topics:
+    - name: ethTopic

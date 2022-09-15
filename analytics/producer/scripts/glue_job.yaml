@@ -1,0 +1,126 @@
+Parameters:
+  s3_bucket:
+    Description: s3 bucket with public blockchain data
+    Type: String
+Resources:
+  glueBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      VersioningConfiguration:
+        Status: Enabled
+      AccessControl: Private
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+
+  glueBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: ForceHTTPS
+            Effect: Deny
+            Principal: "*"
+            Action: "s3:*"
+            Resource:
+              - !Sub ${ glueBucket.Arn}/*
+              - !Sub ${ glueBucket.Arn}
+            Condition:
+              Bool:
+                "aws:SecureTransport": false
+      Bucket: !Ref glueBucket
+
+  glueBucketIAMPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: S3ObjectActions
+            Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:PutObject
+              - s3:PutObjectACL
+              - s3:PutObjectTagging
+              - s3:DeleteObject
+              - s3:RestoreObject
+            Resource:
+              - !Join
+                - ""
+                - - "arn:aws:s3:::"
+                  - !Ref s3_bucket
+                  - "/*"
+          - Sid: S3ListAction
+            Effect: Allow
+            Action: s3:ListBucket
+            Resource:
+              - !Join
+                - ""
+                - - "arn:aws:s3:::"
+                  - !Ref s3_bucket
+          - Sid: S3Glue
+            Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:PutObject
+              - s3:DeleteObject
+              - s3:ListBucket
+            Resource:
+              - !Sub
+                - arn:aws:s3:::${glueBucket}/*
+                - S3Bucket: !Ref "glueBucket"
+
+  glueExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - glue.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole
+        - !Ref "glueBucketIAMPolicy"
+
+  glueJob:
+    Type: AWS::Glue::Job
+    Properties:
+      Role: !GetAtt "glueExecutionRole.Arn"
+      Command:
+        Name: glueetl
+        ScriptLocation: !Join
+          - ""
+          - - "s3://"
+            - !Ref glueBucket
+            - "/daily_glue_job.py"
+      AllocatedCapacity: 2
+      ExecutionProperty:
+        MaxConcurrentRuns: 1
+      GlueVersion: 3.0
+      Name: public-blockchain-data-daily
+
+  glueDailyTrigger:
+    Type: AWS::Glue::Trigger
+    Properties:
+      Name: public-blockchain-data-daily
+      Type: SCHEDULED
+      Actions:
+        - JobName: !Ref glueJob
+      Schedule: cron(15 0 * * ? *)
+
+Outputs:
+  glueBucket:
+    Value: !Ref glueBucket
+    Export:
+      Name: "public-blockchain-data-glue-s3bucket"

@@ -1,0 +1,43 @@
+# You can use any of these parameters to create conditions or mappings in your template.
+Parameters:
+  App:
+    Type: String
+    Description: digital-assets
+  Env:
+    Type: String
+    Description: test
+  Name:
+    Type: String
+    Description: electrum
+
+Resources:
+  # Create your resource here, such as an AWS::DynamoDB::Table:
+  # MyTable:
+  #   Type: AWS::DynamoDB::Table
+  #   Properties:
+  #     ...
+
+  # 1. In addition to your resource, if you need to access the resource from your ECS task 
+  # then you need to create an AWS::IAM::ManagedPolicy that holds the permissions for your resource.
+  #
+ ElectrumSecrectsResourcePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: electrum
+            Effect: Allow
+            Action:
+              - secretsmanager:GetSecretValue
+              - secretsmanager:CreateSecret
+              - secretsmanager:ListSecrets
+              - secretsmanager:DescribeSecret
+              - secretsmanager:List*
+            Resource: "*"
+
+Outputs:
+  # 1. You need to output the IAM ManagedPolicy so that Copilot can add it as a managed policy to your ECS task role.
+  MyTableAccessPolicyArn:
+    Description: "The ARN of the ManagedPolicy to attach to the task role."
+    Value: !Ref ElectrumSecrectsResourcePolicy
