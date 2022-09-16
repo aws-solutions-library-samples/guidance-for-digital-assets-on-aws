@@ -1,5 +1,4 @@
-# AWS Public Blockchain Data - Tutorial
-Tutorial for accessing data from Redshift 
+# AWS Public Blockchain Data - Redshift Examples
 
 1. Setup external schema
 
