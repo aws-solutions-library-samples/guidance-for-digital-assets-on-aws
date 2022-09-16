@@ -18,7 +18,8 @@ For the examples that require crypto market data, please run through the followi
 1. Deploy CloudFormation Stack for market data S3 bucket and schema: [Deploy Stack](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/new?stackName=crypto-marketdata&templateURL=https://aws-blogs-artifacts-public.s3.amazonaws.com/artifacts/DBBLOG-2500/crypto-marketdata.yaml)
 2. Run through all the cells of this notebook [Load Market Data](consumer/sagemaker/load-marketdata.ipynb) in SageMaker Studio to pull external market data and store it in your S3 bucket.
 
-Jupyter Notebooks:
+## Jupyter Notebooks:
+
 - [Bitcoin Analytics](consumer/sagemaker/btc-analytics.ipynb)
 - [Ethereum Analytics](consumer/sagemaker/eth-analytics.ipynb)
 - [Cross-Chain Analytics](consumer/sagemaker/cross-chain-analytics.ipynb)
