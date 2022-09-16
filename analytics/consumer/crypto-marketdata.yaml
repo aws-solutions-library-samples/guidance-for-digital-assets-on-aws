@@ -1,0 +1,97 @@
+Resources:
+  MarketDataBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      VersioningConfiguration:
+        Status: Enabled
+      AccessControl: Private
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+
+  MarketDataBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: ForceHTTPS
+            Effect: Deny
+            Principal: "*"
+            Action: "s3:*"
+            Resource:
+              - !Sub ${ MarketDataBucket.Arn}/*
+              - !Sub ${ MarketDataBucket.Arn}
+            Condition:
+              Bool:
+                "aws:SecureTransport": false
+      Bucket: !Ref MarketDataBucket
+
+  GlueDatabaseMarketData:
+    Type: AWS::Glue::Database
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseInput:
+        Name: marketdata
+
+  GlueTableMarketData:
+    Type: AWS::Glue::Table
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseName: !Ref GlueDatabaseMarketData
+      TableInput:
+        Owner: owner
+        Retention: 0
+        Name: crypto
+        StorageDescriptor:
+          Columns:
+            - Name: ticker
+              Type: string
+            - Name: open_time
+              Type: timestamp
+            - Name: open
+              Type: double
+            - Name: high
+              Type: double
+            - Name: low
+              Type: double
+            - Name: close
+              Type: double
+            - Name: vol
+              Type: double
+            - Name: close_time
+              Type: timestamp
+            - Name: quote_asset_vol
+              Type: double
+            - Name: number_of_trades
+              Type: bigint
+            - Name: taker_base_asset_vol
+              Type: double
+          InputFormat: org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat
+          Location: !Join
+            - ""
+            - - s3://
+              - !Ref MarketDataBucket
+              - /marketdata/crypto/
+          OutputFormat: org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat
+          Compressed: false
+          NumberOfBuckets: -1
+          SerdeInfo:
+            SerializationLibrary: org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe
+            Parameters:
+              serialization.format: "1"
+          BucketColumns: []
+          SortColumns: []
+          StoredAsSubDirectories: false
+        TableType: EXTERNAL_TABLE
+
+Outputs:
+  MarketDataBucket:
+    Description: "The name of the S3 bucket storing market data."
+    Value: !Ref MarketDataBucket
+    Export:
+      Name: "public-blockchain-marketdata"

@@ -9,6 +9,7 @@ Parameters:
 Resources:
   AthenaResultsBucket:
     Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
     Properties:
       VersioningConfiguration:
         Status: Enabled
@@ -571,6 +572,39 @@ Resources:
             Type: string
         TableType: EXTERNAL_TABLE
 
+  LambdaAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: Glue
+            Effect: Allow
+            Action:
+              - glue:GetTable
+              - glue:GetPartitions
+              - glue:BatchCreatePartition
+              - glue:BatchDeletePartition
+            Resource:
+              - arn:aws:glue:*:*:catalog
+              - arn:aws:glue:*:*:database/btc
+              - arn:aws:glue:*:*:database/eth
+              - arn:aws:glue:*:*:table/btc/*
+              - arn:aws:glue:*:*:table/eth/*
+          - Sid: SSM
+            Effect: Allow
+            Action: ssm:GetParameter
+            Resource:
+              - arn:aws:ssm:*:*:parameter/public-blockchain-bucket
+              - arn:aws:ssm:*:*:parameter/public-blockchain-schema-version
+          - Sid: S3
+            Effect: Allow
+            Action: s3:ListBucket
+            Resource:
+              - !Sub
+                - arn:aws:s3:::${S3Bucket}
+                - S3Bucket: !Ref "S3Bucket"
+
   LambdaExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -584,10 +618,42 @@ Resources:
                 - lambda.amazonaws.com
         Version: 2012-10-17
       ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/AWSLambdaExecute
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaRole
-        - arn:aws:iam::aws:policy/AWSGlueConsoleFullAccess
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - !Ref LambdaAccessPolicy
       Path: /
+
+  LambdaInvokerExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+        Version: 2012-10-17
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaRole
+      Path: /
+
+  BucketNameParamater:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Description: AWS Public Blockchain S3 bucket
+      Name: public-blockchain-bucket
+      Type: String
+      Value: !Ref S3Bucket
+
+  SchemaVersionParamater:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Description: AWS Public Blockchain Schema Version
+      Name: public-blockchain-schema-version
+      Type: String
+      Value: !Ref SchemaVersion
 
   LambdaSyncPartitions:
     Type: AWS::Lambda::Function
@@ -600,7 +666,8 @@ Resources:
       - GlueTableContractsETH
       - GlueTableTracesETH
       - GlueTableTokenTransfersETH
-
+      - BucketNameParamater
+      - SchemaVersionParamater
     Properties:
       FunctionName: aws-public-blockchain-sync
       Description: "Sync Partitions"
@@ -615,11 +682,14 @@ Resources:
 
           glue_client = boto3.client("glue")
           s3_client = boto3.client('s3')
+          ssm = boto3.client('ssm')
+
+          parameter = ssm.get_parameter(Name='public-blockchain-bucket', WithDecryption=True)
+          S3_BUCKET = parameter['Parameter']['Value']
+          parameter = ssm.get_parameter(Name='public-blockchain-schema-version', WithDecryption=True)
+          SCHEMA_VERSION = parameter['Parameter']['Value']
 
           flag = False
-
-          S3_BUCKET = "aws-public-blockchain"
-          SCHEMA_VERSION = "v1.0"
 
           d = datetime.date.today()
           dStr = '%s-%02d-%02d' % (d.year, d.month, d.day)
@@ -639,19 +709,21 @@ Resources:
                           x = '/'.join(pref.split('/')[:-1])+'/'
                           if x not in folders:
                               folders.append(x)
+              
+              todayFolder=PREFIX+"date="+dStr+'/'
+              if todayFolder not in folders:
+                  folders.append(todayFolder)
 
               partList = []
               # process folders
               for x in folders:
-                  #print('FOLDER:%s' % [x])
                   pList = x.split('/')
                   dStr1 = (pList[3].split('=')[1]).split('-')
                   yearStr = dStr1[0]
                   monthStr = dStr1[1]
                   dayStr = dStr1[2]
                   folderDate = yearStr+'-'+monthStr+'-'+dayStr
-                  #print("folderDate=%s" % (folderDate))
-                  if folderDate != dStr and folderDate not in existingPartList:
+                  if folderDate not in existingPartList:
                       partList.append(folderDate)
 
               print("new partitions:%s" % len(partList))
@@ -773,7 +845,7 @@ Resources:
                 responseData, 'aws-public-blockchain-sync-id')
 
       Handler: index.handler
-      Role: !GetAtt LambdaExecutionRole.Arn
+      Role: !GetAtt LambdaInvokerExecutionRole.Arn
       Runtime: python3.9
       Timeout: 900
 
@@ -783,9 +855,27 @@ Resources:
     Properties:
       ServiceToken: !GetAtt LambdaInvoker.Arn
 
+  CronjobsScheduledRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: Scheduled Rule
+      ScheduleExpression: cron(0 0 ? * * *)
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt LambdaSyncPartitions.Arn
+          Id: TargetFunctionV1
+
+  PermissionForEventsToInvokeCronjobsFunction:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref LambdaSyncPartitions
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt CronjobsScheduledRule.Arn
+
 Outputs:
-  databucket:
-    Description: "The name of the Athena results bucket."
+  AthenaResultsBucket:
+    Description: "The name of the S3 bucket used for Athena results"
     Value: !Ref AthenaResultsBucket
     Export:
-      Name: "public-blockchain-data-athena"
+      Name: "public-blockchain-athena-results"
