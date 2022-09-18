@@ -18,9 +18,11 @@ You can consume this data using differnt tools like Amazon Athena , Amazon Redsh
 
  Open Athena and select workgroup AWSPublicBlockchain
 
+ ![chart](Athena1.png)
+
+
  ![chart](Athena.png)
 
- ![chart](Athena1.png)
 
  ## Amazon Redshift
 
