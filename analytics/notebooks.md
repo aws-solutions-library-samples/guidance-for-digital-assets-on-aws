@@ -2,7 +2,7 @@
 
 Examples for accessing data from SageMaker Studio / Jupyter Notebooks.
 
-## Instrutions
+## Instructions
 
 1. Setup Amazon SageMaker Studio
 - Follow the instruction from [here](https://docs.aws.amazon.com/sagemaker/latest/dg/onboard-quick-start.html)

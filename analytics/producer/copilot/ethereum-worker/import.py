@@ -2,9 +2,7 @@ import json
 import os
 from datetime import datetime
 
-import awswrangler as wr
 import boto3
-import requests
 
 from initblocks import *
 from worker import *
@@ -24,43 +22,6 @@ TOPIC_ARNS = json.loads(os.getenv("COPILOT_SNS_TOPIC_ARNS"))
 
 client = boto3.client('sns')
 s3_client = boto3.client('s3')
-
-eth_endpoint = os.environ['ETH_ENDPOINT'].split(':')
-ETH_HOST = eth_endpoint[0]
-ETH_PORT = int(eth_endpoint[1])
-
-
-def rpc_erigon(data):
-    serverURL = 'http://' + str(ETH_HOST)+":" + str(ETH_PORT)+'/'
-    headers = {'content-type': "application/json"}
-    payload = data
-    c = 0
-    res = None
-    while c < 5 and res is None:
-        try:
-            response = requests.post(serverURL, headers=headers, data=payload)
-            res = response.json()
-        except Exception as e:
-            print(e)
-            c = c+1
-            print('sleep')
-            time.sleep(c)
-    return res
-
-
-def getBlockByNumber(block):
-    i = {"jsonrpc": "2.0", "method": "eth_getBlockByNumber", "params": [hex(block), True], "id": 1}
-    data = json.dumps(i)
-    r = rpc_erigon(data)
-    return r['result']
-
-
-def blockNumber():
-    i = {"jsonrpc": "2.0", "method": "eth_blockNumber", "params": [], "id": 1}
-    data = json.dumps(i)
-    r = rpc_erigon(data)
-    n = int(r['result'], 16)
-    return n
 
 
 def importBlockWorker(number):
@@ -92,7 +53,7 @@ def importBlockLocal(n):
 
 def importByDateLocal(n):
     print("importByDateLocal:%s" % n)
-    local = True
+    local = False
     if local:
         importByDate(n)
     else:

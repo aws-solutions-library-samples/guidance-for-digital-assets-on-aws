@@ -2,7 +2,6 @@
 import os
 import time
 import traceback
-from collections import defaultdict
 from datetime import datetime
 from decimal import *
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -199,12 +198,84 @@ def checkDataFrame(df, tableName):
                 elif t == "string":
                     df[colName] = df[colName].astype('str')
                     updated = True
+                elif t == "decimal":
+                    df[colName] = df[colName].apply(Decimal)
+                    updated = True
         else:
             del df[colName]
             updated = True
 
         c = c+1
     return updated
+
+
+def getBlockRangeForDate(d, amb=False):
+    n = blockNumber(amb)
+
+    dNext = d+datetime.timedelta(days=1)
+    dStr = '%s-%02d-%02d' % (d.year, d.month, d.day)
+    print("getBlockRangeForDate:%s" % dStr)
+    print("current=%s" % n)
+
+    end = None
+    start = None
+
+    c = 0
+    while (end is None or start is None) and c < 1000:
+        c = c+1
+        print("get block:%s" % n)
+        block = getBlockByNumber(n, amb)
+        if end is None:
+            bTime = int(block['timestamp'], 16)
+            bTimeObj = datetime.datetime.fromtimestamp(bTime)
+            print(bTimeObj)
+            blockStr = '%s-%02d-%02d' % (bTimeObj.year, bTimeObj.month, bTimeObj.day)
+            if blockStr == dStr:
+                block2 = getBlockByNumber(n+1, amb)
+                bTime2 = int(block2['timestamp'], 16)
+                bTimeObj2 = datetime.datetime.fromtimestamp(bTime2)
+                print(bTimeObj2)
+                blockStr2 = '%s-%02d-%02d' % (bTimeObj2.year, bTimeObj2.month, bTimeObj2.day)
+                if blockStr2 > blockStr:
+                    end = n
+                    print("end=%s %s" % (end, blockStr))
+            if end is None:
+                dt = datetime.datetime.combine(dNext, datetime.datetime.min.time())
+                diff = (bTimeObj-dt).total_seconds()
+                print(diff)
+                if diff > 60*5 or diff < -60*5:
+                    nDiff = int(diff/14.5)
+                    if diff < 0:
+                        nDiff = int(diff/9)
+                    n = n-nDiff
+                    print("adjusted to %s" % n)
+
+        if end is not None and start is None:
+            bTime = int(block['timestamp'], 16)
+            bTimeObj = datetime.datetime.fromtimestamp(bTime)
+            print(bTimeObj)
+            blockStr = '%s-%02d-%02d' % (bTimeObj.year, bTimeObj.month, bTimeObj.day)
+            if blockStr < dStr:
+                block2 = getBlockByNumber(n+1, amb)
+                bTime2 = int(block2['timestamp'], 16)
+                bTimeObj2 = datetime.datetime.fromtimestamp(bTime2)
+                print(bTimeObj2)
+                blockStr2 = '%s-%02d-%02d' % (bTimeObj2.year, bTimeObj2.month, bTimeObj2.day)
+                if blockStr2 == dStr:
+                    start = n+1
+                    print("start=%s %s" % (start, dStr))
+            if start is None:
+                dt = datetime.datetime.combine(d, datetime.datetime.min.time())
+                diff = (bTimeObj-dt).total_seconds()
+                print(diff)
+                if diff > 60*5 or diff < -60*5:
+                    nDiff = int(diff/14.5)
+                    if diff < 0:
+                        nDiff = int(diff/9)
+                    n = n-nDiff
+                    print("adjusted to %s" % n)
+        n = n-1
+    return (start, end)
 
 
 def stream(stream, l):
@@ -242,7 +313,7 @@ def addPartition(obj, k, t):
     obj['last_modified'] = datetime.datetime.now()
 
 
-def processTracesContracts(block):
+def processTracesContracts(block, amb=False):
     bTime = int(block['timestamp'], 16)
     bTimeObj = datetime.datetime.fromtimestamp(bTime)
 
@@ -251,7 +322,7 @@ def processTracesContracts(block):
 
     # traces
     rewardCount = 0
-    traces = getTraceBlock(blockNumber)
+    traces = getTraceBlock(blockNumber, amb, block)
     sorted_traces = sorted(traces, key=lambda trace: len(trace['traceAddress'] or []))
     indexed_traces = {getTraceAddressStr(trace): trace for trace in sorted_traces}
     tracesList = []
@@ -376,14 +447,14 @@ def processTracesContracts(block):
     return (tracesList, contractsList)
 
 
-def processTransactionsReceipts(block):
+def processTransactionsReceipts(block, amb=False):
     bTime = int(block['timestamp'], 16)
     bTimeObj = datetime.datetime.fromtimestamp(bTime)
 
     blockNumber = block['number']
 
     rt = 0
-    rList = getBlockReceipts(blockNumber)
+    rList = getBlockReceipts(blockNumber, amb, block)
     rtc = len(rList)-1
     rDict = {}
     for x in rList:
@@ -663,7 +734,7 @@ def writeFile(objList, s3pref, fileCount, table):
     print(r)
 
 
-def importByDate(date):
+def importByDate(date, amb=False):
     print("importByDate:%s" % date)
     start = time.time()
 
@@ -675,11 +746,10 @@ def importByDate(date):
         minBlock = v['start']
         maxBlock = v['end']
     else:
-        s3pref1 = 's3://'+BUCKET+'/'+SCHEMA_VERSION+'/eth/blocks/date='+date
-        dfB = wr.s3.read_parquet(s3pref1, dataset=True, use_threads=True)
-        minBlock = int(dfB['number'].min())
-        maxBlock = int(dfB['number'].max())
-    print("minBlock=%s,maxBlock=%s" % (minBlock, maxBlock))
+        dateObj = datetime.datetime.strptime(date, '%Y-%m-%d')
+        (minBlock, maxBlock) = getBlockRangeForDate(dateObj, amb)
+
+    print("minBlock=%s,maxBlock=%s,count=%s" % (minBlock, maxBlock, (maxBlock-minBlock+1)))
 
     s3pref = 's3://'+BUCKET+'/'
     blockS3 = s3pref+SCHEMA_VERSION+'/eth/blocks/date='+date
@@ -724,17 +794,17 @@ def importByDate(date):
     blockNumber = minBlock
     blocksToImport = (maxBlock-minBlock+1)
     while blockNumber <= maxBlock:
-        blockObj = getBlockByNumber(blockNumber)
+        blockObj = getBlockByNumber(blockNumber, amb)
         blockObj['number'] = int(blockObj['number'], 16)
 
-        (txAdd, rList) = processTransactionsReceipts(blockObj)
+        (txAdd, rList) = processTransactionsReceipts(blockObj, amb)
         txList += txAdd
 
         (logAdd, transferAdd) = processLogsTokenTransfers(blockObj, rList)
         logList += logAdd
         transferList += transferAdd
 
-        (traceAdd, contractAdd) = processTracesContracts(blockObj)
+        (traceAdd, contractAdd) = processTracesContracts(blockObj, amb)
         traceList += traceAdd
         contractList += contractAdd
 

@@ -7,13 +7,10 @@ import traceback
 from datetime import datetime
 from decimal import *
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from threading import Thread
 
 import awswrangler as wr
 import boto3
-import pandas as pd
 import requests
-from boto3.dynamodb.conditions import Key
 from botocore.exceptions import ClientError
 from dynamodb_json import json_util as jsondb
 from pandas import json_normalize
@@ -229,6 +226,9 @@ def checkDataFrame(df, tableName):
                     updated = True
                 elif t == "string":
                     df[colName] = df[colName].astype('str')
+                    updated = True
+                elif t == "decimal":
+                    df[colName] = df[colName].apply(Decimal)
                     updated = True
         else:
             print("removed col:%s" % colName)
