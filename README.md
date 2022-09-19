@@ -2,7 +2,7 @@
 
 This repo contains examples for public blockchain and digital assets use cases on AWS. 
 
-## Bitcoin and Ethereum Blockchains Data
+## Bitcoin and Ethereum Blockchain Data
 
 This solution pulls data from the public Bitcoin and Ethereum blockchains and normalizes data into tabular data structures for blocks, transactions, and additional tables for data inside a block. The data is provided as parquet files partioned by date to provide an easy query interface through services like Amazon Athena, Amazon Redshift, and Amazon SageMaker.
 
