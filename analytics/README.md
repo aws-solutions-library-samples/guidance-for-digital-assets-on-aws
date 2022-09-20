@@ -1,18 +1,47 @@
 # Bitcoin and Ethereum Blockchain Data
 
-This open-source solution pulls data from the public Bitcoin and Ethereum blockchains and normalizes data into tabular data structures for blocks, transactions, and additional tables for data inside a block. The data is provided as parquet files partioned by date to provide an easy query interface through services like Amazon Athena, Amazon Redshift, and Amazon SageMaker.
+This solution pulls data from the public Bitcoin and Ethereum blockchains and normalizes data into tabular data structures for blocks, transactions, and additional tables for data inside a block. The data is provided as Parquet files partioned by date in Amazon S3 to provide an easy query interface through services like Amazon Athena, Amazon Redshift, and Amazon SageMaker.
 
 ## Architecture
 
 ![chart](architecture.png)
 
-## How to consume this data from AWS
+## Data
 
-You can consume this data using differnt tools like Amazon Athena, Amazon Redshift, and Amazon Sagemaker. To get started run the following AWS CloudFormation template in your AWS Account. If you are using Redshift, make sure you deploying this template in ***us-east-2*** region, for Athena and Sagemaker this can be deployed in any region.
+AWS provides Bitcoin and Ethereum blockchain data also in a public Amazon S3 bucket ***aws-public-blockchain*** (us-east-2). Please note that this data is experimental and not recommended for production use cases. You can also choose to run this solution in your own AWS account, in this case you need to replace the name of the public S3 bucket with your own S3 bucket in the following examples. 
 
-[Deploy Stack](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/new?stackName=aws-public-blockchain&templateURL=https://aws-blogs-artifacts-public.s3.amazonaws.com/artifacts/DBBLOG-2500/aws-public-blockchain.yaml)
- 
- Above deployment will provision all necessary resources, security configurations, data partitions, and tables. Now you can use any of the following services to query and do analysis.
+Bitcoin: s3://aws-public-blockchain/v1.0/btc/
+- blocks/date={YYYY-MM-DD}/{id}.snappy.parquet
+- transactions/date={YYYY-MM-DD}/{id}.snappy.parquet
+
+Ethereum: s3://aws-public-blockchain/v1.0/eth/
+- blocks/date={YYYY-MM-DD}/{id}.snappy.parquet
+- transactions /date={YYYY-MM-DD}/{id}.snappy.parquet
+- logs/date={YYYY-MM-DD}/{id}.snappy.parquet
+- token_transfers/date={YYYY-MM-DD}/{id}.snappy.parquet
+- traces/date={YYYY-MM-DD}/{id}.snappy.parquet
+- contracts/date={YYYY-MM-DD}/{id}.snappy.parquet
+
+The schema of the Parquet files is documented for each table and field [here](schema.md).
+
+## How to consume this data
+
+You can access this data directly with the [AWS CLI](https://aws.amazon.com/cli/).
+
+```sh
+aws s3 ls --no-sign-request s3://aws-public-blockchain/v1.0/btc/
+aws s3 ls --no-sign-request s3://aws-public-blockchain/v1.0/eth/
+```
+
+If you want to run SQL queries on this data, we provide a CloudFormation script that deploys Glue table/partition definitions to Glue Data Catalog and configures Athena to be used for SQL queries. By default, the below link will deploy the stack to ***us-east-2*** where the public S3 bucket is located. 
+
+If you only use Athena to query the data, you can deploy it also in another region as Athena supports cross-region access. 
+
+If you want to use Redshift, you need to deploy it to ***us-east-2*** (or the region where the data is hosted) as Redshift Spectrum doesn't support cross-region access currently.
+
+For SageMaker, we can use either Redshift or Athena to access the data. The provided examples use Athena to query the data in a Jupyter notebook. 
+
+[Deploy CloudFormation Stack](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/new?stackName=aws-public-blockchain&templateURL=https://aws-blogs-artifacts-public.s3.amazonaws.com/artifacts/DBBLOG-2500/aws-public-blockchain.yaml)
 
  ## Amazon Athena
 
@@ -80,6 +109,8 @@ select * from eth.transactions limit 1;
 ## Amazon SageMaker
 
 Follow the instructions from [here](notebooks.md)
+
+![chart](images/sagemaker-screenshot.png)
 
 ## How to setup this solution in your own AWS account 
 

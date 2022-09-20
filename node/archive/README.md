@@ -11,7 +11,7 @@ Blog Post "Experimenting with Bitcoin Blockchain on AWS": https://aws.amazon.com
 ```sh
 cd ~/environments
 git clone https://github.com/aws-samples/digital-assets-examples.git
-cd digital-assets-examples/archive/bitcoin_node/
+cd digital-assets-examples/node/archive/bitcoin_node/
 ```
 - Setup SSL certificate
 ```sh

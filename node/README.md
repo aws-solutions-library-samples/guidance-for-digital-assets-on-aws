@@ -1,4 +1,4 @@
-# Payments
+# node
 
 Blog Post "Experimenting with Bitcoin Blockchain on AWS": https://aws.amazon.com/blogs/industries/experimenting-with-bitcoin-blockchain-on-aws/
 
@@ -57,7 +57,7 @@ aws configure
 
 - Create copilot application "digital-assets". Please note application needs to be unique per region.
 ```sh
-cd $DIGITAL_ASSETS_HOME/payments/copilot/
+cd $DIGITAL_ASSETS_HOME/node/copilot/
 copilot app init
 ```
 - Specify "digital-assets" for Application name.
@@ -72,12 +72,12 @@ copilot env init
 
 - Configure RPC authentication:
 ```sh
-cd $DIGITAL_ASSETS_HOME/payments/copilot/bitcoin-node/
+cd $DIGITAL_ASSETS_HOME/node/copilot/bitcoin-node/
 ./init.sh
 ```
 - Setup and Deploy service "bitcoin-node" 
 ```sh
-cd $DIGITAL_ASSETS_HOME/payments/copilot/
+cd $DIGITAL_ASSETS_HOME/node/copilot/
 copilot svc init --name=bitcoin-node
 copilot svc deploy --name=bitcoin-node
 ```
@@ -92,12 +92,12 @@ cd $DIGITAL_ASSETS_HOME/base
 
 - Configure SSL certs for "test" environment:
 ```sh
-cd $DIGITAL_ASSETS_HOME/payments/copilot/electrum/
+cd $DIGITAL_ASSETS_HOME/node/copilot/electrum/
 ./init.sh test
 ```
 - Setup and Deploy service "electrum" 
 ```sh
-cd $DIGITAL_ASSETS_HOME/payments/copilot/
+cd $DIGITAL_ASSETS_HOME/node/copilot/
 copilot svc init --name=electrum
 copilot svc deploy --name=electrum
 ```
