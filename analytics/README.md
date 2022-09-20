@@ -46,31 +46,33 @@ Keep rest of the defaults and create.
 
 ### Open query editor and create schema
 
-Execute the following statements and replace ***iam_role*** with your IAM role from the previous step.
+Replace ***account*** and ***role*** with your details and execute the following statements.
 
+```sql
 create external schema btc
 from data catalog
 database 'btc' 
-iam_role '***arn:aws:iam::{account}:role/service-role/{role}***'
+iam_role 'arn:aws:iam::{account}:role/service-role/{role}'
 create external database if not exists;
 
 create external schema eth
 from data catalog
 database 'eth' 
-iam_role '***arn:aws:iam::{account}:role/service-role/{role}***'
+iam_role 'arn:aws:iam::{account}:role/service-role/{role}'
 create external database if not exists;
+```
 
 ![chart](images/Redshift6.png)
 
 ### Start exploring and analyzing the data
 
+```sh
 select * from btc.blocks limit 1;
-
 select * from btc.transactions  limit 1;
 
 select * from eth.blocks limit 1;
-
 select * from eth.transactions limit 1;
+```
 
 ![chart](images/Redshift7.png)
 

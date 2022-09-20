@@ -106,9 +106,9 @@ to_address | string | Address of the receiver
 value | double | Value transferred
 input | string | The data sent along with the message call
 output | string | The output of the message call, bytecode of contract when trace_type is create
-trace_type | string | 
-call_type | string |
-reward_type | string |
+trace_type | string | Trace type
+call_type | string | Call type
+reward_type | string | Reward type
 gas | bigint | Gas provided with the message call
 gas_used | bigint | Gas used by the message call
 subtraces | bigint | Number of subtraces

@@ -68,3 +68,23 @@ outputs | required_signatures | bigint | The number of signatures required to au
 outputs | type | string | The address type of the output
 outputs | address | string | Address which owns this output
 outputs | value | double | The value in BTC attached to this output
+
+## View inputs
+
+View for all inputs can be created from table transactions with the following statement.
+
+```sql
+CREATE OR REPLACE VIEW btc.inputs AS (
+  SELECT t.date,t.block_hash,t.block_number,t.block_timestamp,t.hash AS transaction_hash,input.index,input.spent_transaction_hash,input.spend_output_index,input.script_asm,input.script_hex,input.sequence,input.required_signatures,input.type,input.address,input.value FROM btc.transactions t,UNNEST(t.inputs) AS t(input)
+)
+```
+
+## View outputs
+
+View for all outputs can be created from table transactions with the following statement.
+
+```sql
+CREATE OR REPLACE VIEW btc.outputs as (
+  SELECT t.date,t.block_hash,t.block_number,t.block_timestamp,t.hash AS transaction_hash,output.index,output.script_asm,output.script_hex,output.required_signatures,output.type,output.address,output.value from btc.transactions t,UNNEST(t.outputs) AS t(output)
+)
+```
