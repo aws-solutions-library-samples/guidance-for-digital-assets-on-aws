@@ -41,7 +41,7 @@ def processFolder(folderPath):
         if filename.endswith(".snappy.parquet") and filename.startswith("part-"):
             print("copy %s from %s to %s" % (key, SRC_BUCKET, DEST_BUCKET))
             copy_object = {'Bucket': SRC_BUCKET, 'Key': key}
-            s3_client.copy_object(CopySource=copy_object, Bucket=DEST_BUCKET, Key=key)
+            s3_client.copy_object(CopySource=copy_object, Bucket=DEST_BUCKET, Key=key, ACL='bucket-owner-full-control')
             aggFilesCopied = True
 
     print("aggFilesCopied=%s" % aggFilesCopied)

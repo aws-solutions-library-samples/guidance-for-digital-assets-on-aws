@@ -546,22 +546,21 @@ def processLogsTokenTransfers(block, rList):
                     topics = logObj['topics']
                     if topics is not None and len(topics) > 0 and topics[0] == TRANSFER_EVENT_TOPIC:
                         topics_with_data = topics + split_to_words(logObj['data'])
-                        if len(topics_with_data) != 4:
-                            return
-                        tokenTransferObj = {}
-                        tokenTransferObj['token_address'] = logObj['address']
-                        tokenTransferObj['from_address'] = topics_with_data[1]
-                        tokenTransferObj['to_address'] = topics_with_data[2]
-                        tokenTransferObj['value'] = float(int(topics_with_data[3], 16))
-                        if logObj['data'] != '0x':
-                            tokenTransferObj['value'] = float(int(logObj['data'], 16))
-                        tokenTransferObj['transaction_hash'] = logObj['transactionHash']
-                        tokenTransferObj['log_index'] = int(logObj['logIndex'], 16)
-                        tokenTransferObj['block_number'] = int(logObj['blockNumber'], 16)
-                        tokenTransferObj['block_hash'] = blockHash
-                        addPartition(tokenTransferObj, 'block_timestamp', bTimeObj)
+                        if len(topics_with_data) >= 4:
+                            tokenTransferObj = {}
+                            tokenTransferObj['token_address'] = logObj['address']
+                            tokenTransferObj['from_address'] = topics_with_data[1]
+                            tokenTransferObj['to_address'] = topics_with_data[2]
+                            tokenTransferObj['value'] = float(int(topics_with_data[3], 16))
+                            if logObj['data'] != '0x':
+                                tokenTransferObj['value'] = float(int(logObj['data'], 16))
+                            tokenTransferObj['transaction_hash'] = logObj['transactionHash']
+                            tokenTransferObj['log_index'] = int(logObj['logIndex'], 16)
+                            tokenTransferObj['block_number'] = int(logObj['blockNumber'], 16)
+                            tokenTransferObj['block_hash'] = blockHash
+                            addPartition(tokenTransferObj, 'block_timestamp', bTimeObj)
 
-                        token_transfersList += [tokenTransferObj]
+                            token_transfersList += [tokenTransferObj]
 
                 logObj['transaction_index'] = int(logObj['transactionIndex'], 16)
                 del logObj['transactionIndex']
