@@ -1,7 +1,10 @@
 # Database btc
 
 This schema follows the table/field structure of the open-source project bitcoin-etl (https://github.com/blockchain-etl/bitcoin-etl).
+
 All data is sourced from Bitcoin Core node (22.0). 
+
+New data is delivered in each table folder as a new Parquet file "{block number}.snappy.parquet" ~10-20 seconds after a new block is received from the Bitcoin network. Every night ~00:35 am UTC intra-day files are replaced with one Parquet file per day "part-NNNNN-*.snappy.parquet". 
 
 ## Table blocks
 

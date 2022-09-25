@@ -1,7 +1,10 @@
 # Database eth
 
 This schema follows the table/field structure of the open-source project ethereum-etl (https://github.com/blockchain-etl/ethereum-etl).
-All data is sourced from Erigon node (2022.08.3). 
+
+All data is sourced from Erigon node (v2022.09.03) with Lighthouse (v3.1.0) CL. 
+
+Currently new data is delivered in each table folder every night ~01:45 am UTC as one Parquet file per day "part-NNNNN-*.snappy.parquet". Depending on feedback, intraday files can be provided.
 
 ## Table blocks
 
