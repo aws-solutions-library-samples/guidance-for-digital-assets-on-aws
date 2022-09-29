@@ -1,7 +1,10 @@
 # Database eth
 
 This schema follows the table/field structure of the open-source project ethereum-etl (https://github.com/blockchain-etl/ethereum-etl).
-All data is sourced from Erigon node (2022.08.3). 
+
+All data is sourced from Erigon node (v2022.09.03) with Lighthouse (v3.1.0) CL. 
+
+Currently new data is delivered in each table folder every night ~01:45 am UTC as one Parquet file per day "part-NNNNN-*.snappy.parquet". Depending on feedback, intraday files can be provided.
 
 ## Table blocks
 
@@ -106,9 +109,9 @@ to_address | string | Address of the receiver
 value | double | Value transferred
 input | string | The data sent along with the message call
 output | string | The output of the message call, bytecode of contract when trace_type is create
-trace_type | string | 
-call_type | string |
-reward_type | string |
+trace_type | string | Trace type
+call_type | string | Call type
+reward_type | string | Reward type
 gas | bigint | Gas provided with the message call
 gas_used | bigint | Gas used by the message call
 subtraces | bigint | Number of subtraces

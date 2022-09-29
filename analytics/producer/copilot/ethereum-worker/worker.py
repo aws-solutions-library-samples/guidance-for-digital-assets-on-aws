@@ -2,7 +2,6 @@
 import os
 import time
 import traceback
-from collections import defaultdict
 from datetime import datetime
 from decimal import *
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -199,12 +198,91 @@ def checkDataFrame(df, tableName):
                 elif t == "string":
                     df[colName] = df[colName].astype('str')
                     updated = True
+                elif t == "decimal":
+                    df[colName] = df[colName].apply(Decimal)
+                    updated = True
         else:
             del df[colName]
             updated = True
 
         c = c+1
     return updated
+
+
+def getBlockRangeForDate(d, amb=False):
+    n = blockNumber(amb)
+    print("latest=%s % n")
+    maxN = n
+    dNext = d+datetime.timedelta(days=1)
+    dStr = '%s-%02d-%02d' % (d.year, d.month, d.day)
+    print("getBlockRangeForDate:%s" % dStr)
+    print("current=%s" % n)
+
+    end = None
+    start = None
+
+    c = 0
+    while (end is None or start is None) and c < 1000:
+        c = c+1
+        print("get block:%s" % n)
+        block = getBlockByNumber(n, amb)
+        if end is None:
+            bTime = int(block['timestamp'], 16)
+            bTimeObj = datetime.datetime.fromtimestamp(bTime)
+            print(bTimeObj)
+            blockStr = '%s-%02d-%02d' % (bTimeObj.year, bTimeObj.month, bTimeObj.day)
+            if blockStr == dStr:
+                block2 = getBlockByNumber(n+1, amb)
+                bTime2 = int(block2['timestamp'], 16)
+                bTimeObj2 = datetime.datetime.fromtimestamp(bTime2)
+                print(bTimeObj2)
+                blockStr2 = '%s-%02d-%02d' % (bTimeObj2.year, bTimeObj2.month, bTimeObj2.day)
+                if blockStr2 > blockStr:
+                    end = n
+                    print("end=%s %s" % (end, blockStr))
+            if end is None:
+                dt = datetime.datetime.combine(dNext, datetime.datetime.min.time())
+                diff = (bTimeObj-dt).total_seconds()
+                print(diff)
+                if diff > 60*3 or diff < 0:
+                    nDiff = int(diff/14.5)
+                    if diff < 0:
+                        nDiff = int(diff/8)
+                        if nDiff > -2:
+                            nDiff = -2
+                    # print(nDiff)
+                    n = n-nDiff
+                    print("adjusted to %s" % n)
+
+        if end is not None and start is None:
+            bTime = int(block['timestamp'], 16)
+            bTimeObj = datetime.datetime.fromtimestamp(bTime)
+            print(bTimeObj)
+            blockStr = '%s-%02d-%02d' % (bTimeObj.year, bTimeObj.month, bTimeObj.day)
+            if blockStr < dStr:
+                block2 = getBlockByNumber(n+1, amb)
+                bTime2 = int(block2['timestamp'], 16)
+                bTimeObj2 = datetime.datetime.fromtimestamp(bTime2)
+                print(bTimeObj2)
+                blockStr2 = '%s-%02d-%02d' % (bTimeObj2.year, bTimeObj2.month, bTimeObj2.day)
+                if blockStr2 == dStr:
+                    start = n+1
+                    print("start=%s %s" % (start, dStr))
+            if start is None:
+                dt = datetime.datetime.combine(d, datetime.datetime.min.time())
+                diff = (bTimeObj-dt).total_seconds()
+                print(diff)
+                if diff > 60*3 or diff < 0:
+                    nDiff = int(diff/14.5)
+                    if diff < 0:
+                        nDiff = int(diff/8)
+                        if nDiff > -2:
+                            nDiff = -2
+                    # print(nDiff)
+                    n = n-nDiff
+                    print("adjusted to %s" % n)
+        n = n-1
+    return (start, end)
 
 
 def stream(stream, l):
@@ -242,7 +320,7 @@ def addPartition(obj, k, t):
     obj['last_modified'] = datetime.datetime.now()
 
 
-def processTracesContracts(block):
+def processTracesContracts(block, amb=False):
     bTime = int(block['timestamp'], 16)
     bTimeObj = datetime.datetime.fromtimestamp(bTime)
 
@@ -251,7 +329,10 @@ def processTracesContracts(block):
 
     # traces
     rewardCount = 0
-    traces = getTraceBlock(blockNumber)
+    traces = getTraceBlock(blockNumber, amb, block)
+    if traces is None:
+        print("WARN:trace empty for block:%s" % (blockNumber))
+        traces = []
     sorted_traces = sorted(traces, key=lambda trace: len(trace['traceAddress'] or []))
     indexed_traces = {getTraceAddressStr(trace): trace for trace in sorted_traces}
     tracesList = []
@@ -376,14 +457,14 @@ def processTracesContracts(block):
     return (tracesList, contractsList)
 
 
-def processTransactionsReceipts(block):
+def processTransactionsReceipts(block, amb=False):
     bTime = int(block['timestamp'], 16)
     bTimeObj = datetime.datetime.fromtimestamp(bTime)
 
     blockNumber = block['number']
 
     rt = 0
-    rList = getBlockReceipts(blockNumber)
+    rList = getBlockReceipts(blockNumber, amb, block)
     rtc = len(rList)-1
     rDict = {}
     for x in rList:
@@ -475,22 +556,21 @@ def processLogsTokenTransfers(block, rList):
                     topics = logObj['topics']
                     if topics is not None and len(topics) > 0 and topics[0] == TRANSFER_EVENT_TOPIC:
                         topics_with_data = topics + split_to_words(logObj['data'])
-                        if len(topics_with_data) != 4:
-                            return
-                        tokenTransferObj = {}
-                        tokenTransferObj['token_address'] = logObj['address']
-                        tokenTransferObj['from_address'] = topics_with_data[1]
-                        tokenTransferObj['to_address'] = topics_with_data[2]
-                        tokenTransferObj['value'] = float(int(topics_with_data[3], 16))
-                        if logObj['data'] != '0x':
-                            tokenTransferObj['value'] = float(int(logObj['data'], 16))
-                        tokenTransferObj['transaction_hash'] = logObj['transactionHash']
-                        tokenTransferObj['log_index'] = int(logObj['logIndex'], 16)
-                        tokenTransferObj['block_number'] = int(logObj['blockNumber'], 16)
-                        tokenTransferObj['block_hash'] = blockHash
-                        addPartition(tokenTransferObj, 'block_timestamp', bTimeObj)
+                        if len(topics_with_data) >= 4:
+                            tokenTransferObj = {}
+                            tokenTransferObj['token_address'] = logObj['address']
+                            tokenTransferObj['from_address'] = topics_with_data[1]
+                            tokenTransferObj['to_address'] = topics_with_data[2]
+                            tokenTransferObj['value'] = float(int(topics_with_data[3], 16))
+                            if logObj['data'] != '0x':
+                                tokenTransferObj['value'] = float(int(logObj['data'], 16))
+                            tokenTransferObj['transaction_hash'] = logObj['transactionHash']
+                            tokenTransferObj['log_index'] = int(logObj['logIndex'], 16)
+                            tokenTransferObj['block_number'] = int(logObj['blockNumber'], 16)
+                            tokenTransferObj['block_hash'] = blockHash
+                            addPartition(tokenTransferObj, 'block_timestamp', bTimeObj)
 
-                        token_transfersList += [tokenTransferObj]
+                            token_transfersList += [tokenTransferObj]
 
                 logObj['transaction_index'] = int(logObj['transactionIndex'], 16)
                 del logObj['transactionIndex']
@@ -663,9 +743,12 @@ def writeFile(objList, s3pref, fileCount, table):
     print(r)
 
 
-def importByDate(date):
+def importByDate(date, amb=False):
     print("importByDate:%s" % date)
     start = time.time()
+
+    #latest = blockNumber(amb)
+    #print("lastest=%s" % latest)
 
     blockMap = getBlockMap()
     minBlock = -1
@@ -675,11 +758,13 @@ def importByDate(date):
         minBlock = v['start']
         maxBlock = v['end']
     else:
-        s3pref1 = 's3://'+BUCKET+'/'+SCHEMA_VERSION+'/eth/blocks/date='+date
-        dfB = wr.s3.read_parquet(s3pref1, dataset=True, use_threads=True)
-        minBlock = int(dfB['number'].min())
-        maxBlock = int(dfB['number'].max())
-    print("minBlock=%s,maxBlock=%s" % (minBlock, maxBlock))
+        dateObj = datetime.datetime.strptime(date, '%Y-%m-%d')
+        (minBlock, maxBlock) = getBlockRangeForDate(dateObj, amb)
+
+    print("minBlock=%s,maxBlock=%s,count=%s" % (minBlock, maxBlock, (maxBlock-minBlock+1)))
+
+    # if latest < maxBlock:
+    #    print("blocks not synced:latest=%s last=%s diff=%s" % (latest, maxBlock, (latest-maxBlock)))
 
     s3pref = 's3://'+BUCKET+'/'
     blockS3 = s3pref+SCHEMA_VERSION+'/eth/blocks/date='+date
@@ -724,57 +809,60 @@ def importByDate(date):
     blockNumber = minBlock
     blocksToImport = (maxBlock-minBlock+1)
     while blockNumber <= maxBlock:
-        blockObj = getBlockByNumber(blockNumber)
-        blockObj['number'] = int(blockObj['number'], 16)
+        blockObj = getBlockByNumber(blockNumber, amb)
+        if True:  # blockObj is not None:
+            blockObj['number'] = int(blockObj['number'], 16)
 
-        (txAdd, rList) = processTransactionsReceipts(blockObj)
-        txList += txAdd
+            (txAdd, rList) = processTransactionsReceipts(blockObj, amb)
+            txList += txAdd
 
-        (logAdd, transferAdd) = processLogsTokenTransfers(blockObj, rList)
-        logList += logAdd
-        transferList += transferAdd
+            (logAdd, transferAdd) = processLogsTokenTransfers(blockObj, rList)
+            logList += logAdd
+            transferList += transferAdd
 
-        (traceAdd, contractAdd) = processTracesContracts(blockObj)
-        traceList += traceAdd
-        contractList += contractAdd
+            (traceAdd, contractAdd) = processTracesContracts(blockObj, amb)
+            traceList += traceAdd
+            contractList += contractAdd
 
-        blockAdd = processBlockData(blockObj)
-        blockList += blockAdd
+            blockAdd = processBlockData(blockObj)
+            blockList += blockAdd
 
-        if len(blockList) > 100000:
-            blockCount += len(blockList)
-            blockFileCount += 1
-            writeFile(blockList, blockS3, blockFileCount, "blocks")
-            blockList = []
-        if len(txList) > 100000:
-            txCount += len(txList)
-            txFileCount += 1
-            writeFile(txList, txS3, txFileCount, "transactions")
-            txList = []
-        if len(logList) > 100000:
-            logCount += len(logList)
-            logFileCount += 1
-            writeFile(logList, logS3, logFileCount, "logs")
-            logList = []
-        if len(transferList) > 100000:
-            transferCount += len(transferList)
-            transferFileCount += 1
-            writeFile(transferList, transferS3, transferFileCount, "token_transfers")
-            transferList = []
-        if len(traceList) > 100000:
-            traceCount += len(traceList)
-            traceFileCount += 1
-            writeFile(traceList, traceS3, traceFileCount, "traces")
-            traceList = []
-        if len(contractList) > 100000:
-            contractCount += len(contractList)
-            contractFileCount += 1
-            writeFile(contractList, contractS3, contractFileCount, "contracts")
-            contractList = []
+            if len(blockList) > 100000:
+                blockCount += len(blockList)
+                blockFileCount += 1
+                writeFile(blockList, blockS3, blockFileCount, "blocks")
+                blockList = []
+            if len(txList) > 100000:
+                txCount += len(txList)
+                txFileCount += 1
+                writeFile(txList, txS3, txFileCount, "transactions")
+                txList = []
+            if len(logList) > 100000:
+                logCount += len(logList)
+                logFileCount += 1
+                writeFile(logList, logS3, logFileCount, "logs")
+                logList = []
+            if len(transferList) > 100000:
+                transferCount += len(transferList)
+                transferFileCount += 1
+                writeFile(transferList, transferS3, transferFileCount, "token_transfers")
+                transferList = []
+            if len(traceList) > 100000:
+                traceCount += len(traceList)
+                traceFileCount += 1
+                writeFile(traceList, traceS3, traceFileCount, "traces")
+                traceList = []
+            if len(contractList) > 100000:
+                contractCount += len(contractList)
+                contractFileCount += 1
+                writeFile(contractList, contractS3, contractFileCount, "contracts")
+                contractList = []
 
-        processed = processed+1
-        if processed > 1 and processed % 50 == 0:
-            print("processed:%s of %s (%.2f)" % (processed, blocksToImport, processed/blocksToImport*100.0))
+            processed = processed+1
+            if processed > 1 and processed % 50 == 0:
+                print("processed:%s of %s (%.2f)" % (processed, blocksToImport, processed/blocksToImport*100.0))
+        else:
+            print("WARN: block not found:%s" % blockNumber)
 
         blockNumber += 1
 

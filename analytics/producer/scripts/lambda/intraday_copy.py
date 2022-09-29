@@ -33,7 +33,7 @@ def lambda_handler(event, context):
                 print("copy to %s" % DEST_BUCKET)
                 copy_object = {'Bucket': source_bucket, 'Key': source_key}
                 # write copy statement
-                s3_client.copy_object(CopySource=copy_object, Bucket=DEST_BUCKET, Key=source_key)
+                s3_client.copy_object(CopySource=copy_object, Bucket=DEST_BUCKET, Key=source_key, ACL='bucket-owner-full-control')
 
         except Exception as e:
             print(e)

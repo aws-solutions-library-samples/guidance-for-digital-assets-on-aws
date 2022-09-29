@@ -1,11 +1,17 @@
-import sys, os, base64, datetime, hashlib, hmac 
-import requests
-import boto3
-from requests.structures import CaseInsensitiveDict
-from urllib.parse import quote
-import re
+import datetime
+import gzip
+import hashlib
+import hmac
 import json
+import os
+import re
 import time
+from urllib.parse import quote
+
+import boto3
+import requests
+from requests.structures import CaseInsensitiveDict
+
 
 def sha256_hash(val):
     """
@@ -13,11 +19,13 @@ def sha256_hash(val):
     """
     return hashlib.sha256(val.encode('utf-8')).hexdigest()
 
+
 def sha256_hash_for_binary_data(val):
     """
     Sha256 hash of binary data.
     """
     return hashlib.sha256(val).hexdigest()
+
 
 def sign(key, msg):
     """
@@ -27,6 +35,7 @@ def sign(key, msg):
     #signature-v4-examples-python
     """
     return hmac.new(key, msg.encode('utf-8'), hashlib.sha256).digest()
+
 
 def url_path_to_dict(path):
     pattern = (r'^'
@@ -48,6 +57,7 @@ def url_path_to_dict(path):
         url_dict['query'] = ''
 
     return url_dict
+
 
 def make_request(method,
                  service,
@@ -111,6 +121,7 @@ def make_request(method,
     else:
         return __send_request(uri, data.encode('utf-8'), headers, method, verify, allow_redirects)
 
+
 def task_1_create_a_canonical_request(
         query,
         headers,
@@ -140,7 +151,7 @@ def task_1_create_a_canonical_request(
     request_parameters variable.
     """
     canonical_querystring = __normalize_query_string(query)
-    #__log(canonical_querystring)
+    # __log(canonical_querystring)
 
     # If the host was specified in the HTTP header, ensure that the canonical
     # headers are set accordingly
@@ -241,6 +252,7 @@ def task_3_calculate_the_signature(
     signature = hmac.new(signing_key, encoded, hashlib.sha256).hexdigest()
     return signature
 
+
 def task_4_build_auth_headers_for_the_request(
         amzdate,
         payload_hash,
@@ -277,6 +289,7 @@ def task_4_build_auth_headers_for_the_request(
         'x-amz-content-sha256': payload_hash
     }
 
+
 def __normalize_query_string(query):
     parameter_pairs = (list(map(str.strip, s.split("=")))
                        for s in query.split('&')
@@ -290,142 +303,218 @@ def __normalize_query_string(query):
 def aws_url_encode(text):
     return quote(text, safe='~=').replace('=', '==')
 
+
 def __now():
     return datetime.datetime.utcnow()
+
 
 def __send_request(uri, data, headers, method, verify, allow_redirects):
     response = requests.request(method, uri, headers=headers, data=data, verify=verify, allow_redirects=allow_redirects)
     return response
 
+
 def getCredentials():
     sts = boto3.client('sts')
-    d=sts.get_caller_identity()
+    d = sts.get_caller_identity()
     #print("identity=%s" % d)
-    role=d['Arn'].split('/')[-2:-1][0]
+    role = d['Arn'].split('/')[-2:-1][0]
     #print("role=%s" % role)
-    account=d['Account']
+    account = d['Account']
 
     # Call the assume_role method of the STSConnection object and pass the role
     # ARN and a role session name.
-    assumed_role_object=sts.assume_role(
+    assumed_role_object = sts.assume_role(
         RoleArn="arn:aws:iam::"+account+":role/"+role,
         RoleSessionName="AssumeRoleETH"
     )
-    # From the response that contains the assumed role, get the temporary 
+    # From the response that contains the assumed role, get the temporary
     # credentials that can be used to make subsequent API calls
-    credentials=assumed_role_object['Credentials']
+    credentials = assumed_role_object['Credentials']
     return credentials
 
-credentials=getCredentials()
+
+credentials = getCredentials()
 
 envName = os.environ['COPILOT_ENVIRONMENT_NAME']
 
-eth_endpoint=os.environ['ETH_ENDPOINT'].split(':')
-#print(eth_endpoint)
-ETH_HOST=eth_endpoint[0]
-ETH_PORT=int(eth_endpoint[1])
+eth_endpoint = os.environ['ETH_ENDPOINT'].split(':')
+ETH_HOST = eth_endpoint[0]
+ETH_PORT = int(eth_endpoint[1])
+
+if 'AMB_ENDPOINT' in os.environ:
+    ETH_AMB_REGION = os.environ['AWS_REGION']
+    ETH_AMB_ENDPOINT = os.environ['AMB_ENDPOINT']
 
 
 def rpc_amb(data):
-    headers= ['Accept: application/xml', 'Content-Type: application/json']
+    #print("rpc_amb:%s" % data)
+    headers = ['Accept: application/gzip',
+               'Accept-Encoding: gzip']
+
     headers = {k: v for (k, v) in map(lambda s: s.split(": "), headers)}
     headers = CaseInsensitiveDict(headers)
-    c=0
-    res=None
-    while c<5 and res is None: 
+    c = 0
+    res = None
+    while c < 5 and res is None:
         try:
             response = make_request('POST',
-                'managedblockchain',
-                'us-east-1',
-                'https://'+ETH_HOST+'.us-east-1.amazonaws.com',
-                headers,
-                data,
-                credentials['AccessKeyId'],
-                credentials['SecretAccessKey'],
-                credentials['SessionToken'],
-                False,
-                verify=True,
-                allow_redirects=False)
-            res=response.json()
+                                    'managedblockchain',
+                                    ETH_AMB_REGION,
+                                    ETH_AMB_ENDPOINT,
+                                    headers,
+                                    data,
+                                    credentials['AccessKeyId'],
+                                    credentials['SecretAccessKey'],
+                                    credentials['SessionToken'],
+                                    False,
+                                    verify=True,
+                                    allow_redirects=False)
+            # print(response)
+            h = response.headers
+            if 'Content-Type' in h:
+                ct = h['Content-Type']
+                if ct == "gzip":
+                    res = json.loads(gzip.decompress(response.content))
+                    # print(res)
+            else:
+                res = response.json()
+
             if 'result' not in res:
-                res=None
+                res = None
         except Exception as e:
             print(e)
-            c=c+1
+            c = c+1
             print("sleep")
             time.sleep(c)
     return res
 
+
 def getBlockByNumber_amb(block):
-    i={"jsonrpc": "2.0", "method": "eth_getBlockByNumber", "params": [hex(block),True], "id": 1}
-    data=json.dumps(i)
-    #print(data)
-    o=rpc_amb(data)
+    i = {"jsonrpc": "2.0", "method": "eth_getBlockByNumber", "params": [hex(block), True], "id": 1}
+    data = json.dumps(i)
+    # print(data)
+    o = rpc_amb(data)
     return o['result']
 
+
 def blockNumber_amb():
-    i={"jsonrpc": "2.0", "method": "eth_blockNumber", "params": [], "id": 1}
-    data=json.dumps(i)
-    #print(data)
-    o=rpc_amb(data)
-    n=int(o['result'],16)
+    i = {"jsonrpc": "2.0", "method": "eth_blockNumber", "params": [], "id": 1}
+    data = json.dumps(i)
+    # print(data)
+    o = rpc_amb(data)
+    n = int(o['result'], 16)
     return n
 
+
+def getBlockReceipts_amb(block, blockObj):
+    r = []
+    for t in blockObj['transactions']:
+        rItem = getReceiptTransaction_amb(t['hash'])
+        r.append(rItem)
+    #print("getBlockReceipts_amb:%s" % len(r))
+    return r
+
+
+def getReceiptTransaction_amb(hash):
+    i = {"jsonrpc": "2.0", "method": "eth_getTransactionReceipt", "params": [hash], "id": 1}
+    data = json.dumps(i)
+    # print(data)
+    r = rpc_amb(data)
+    # print(r)
+    return r['result']
+
+
+def getTraceTransaction_amb(hash):
+    i = {"jsonrpc": "2.0", "method": "debug_traceTransaction", "params": [hash, {}], "id": 1}
+    data = json.dumps(i)
+    # print(data)
+    r = rpc_amb(data)
+    print(r)
+    return r['result']
+
+
+def getTraceBlock_amb(block, blockObj):
+    '''for t in blockObj['transactions']:
+        print([t['hash']])
+        tr = getTraceTransaction_amb(t['hash'])
+        print(tr)
+    '''
+    i = {"jsonrpc": "2.0", "method": "debug_traceBlockByNumber", "params": [hex(block), {}], "id": 1}
+    data = json.dumps(i)
+    # print(data)
+    r = rpc_amb(data)
+    # print(r)
+    return r['result']
+
+
 def rpc_erigon(data):
-    serverURL = 'http://'+ str(ETH_HOST)+":" + str(ETH_PORT)+'/'
+    serverURL = 'http://' + str(ETH_HOST)+":" + str(ETH_PORT)+'/'
     headers = {'content-type': "application/json"}
     payload = data
-    c=0
-    res=None
-    while c<5 and res is None:
+    #print("rpc:%s" % data)
+    c = 0
+    res = None
+    while c < 5 and res is None:
         try:
             response = requests.post(serverURL, headers=headers, data=payload)
-            res=response.json()
+            res = response.json()
         except Exception as e:
             print(e)
-            c=c+1
+            c = c+1
             print('sleep')
             time.sleep(c)
     return res
 
-def getBlockByNumber(block):
-    i={"jsonrpc": "2.0", "method": "eth_getBlockByNumber", "params": [hex(block),True], "id": 1}
-    data=json.dumps(i)
-    #print(data)
-    r=rpc_erigon(data) 
+
+def getBlockByNumber(block, amb=False):
+    if amb:
+        return getBlockByNumber_amb(block)
+    i = {"jsonrpc": "2.0", "method": "eth_getBlockByNumber", "params": [hex(block), True], "id": 1}
+    data = json.dumps(i)
+    # print(data)
+    r = rpc_erigon(data)
     return r['result']
 
-def blockNumber():
-    i={"jsonrpc": "2.0", "method": "eth_blockNumber", "params": [], "id": 1}
-    data=json.dumps(i)
-    #print(data)
-    r=rpc_erigon(data)    
-    #print(r)
-    n=int(r['result'],16)
+
+def blockNumber(amb=False):
+    if amb:
+        return blockNumber_amb()
+    i = {"jsonrpc": "2.0", "method": "eth_blockNumber", "params": [], "id": 1}
+    data = json.dumps(i)
+    # print(data)
+    r = rpc_erigon(data)
+    # print(r)
+    n = int(r['result'], 16)
     return n
 
-def getBlockReceipts(block):
-    i={"jsonrpc": "2.0", "method": "eth_getBlockReceipts", "params": [hex(block)], "id": 1}
-    data=json.dumps(i)
-    #print(data)
-    r=rpc_erigon(data)    
-    #print(r)
+
+def getBlockReceipts(block, amb=False, blockObj=None):
+    # if amb:
+    #    return getBlockReceipts_amb(block, blockObj)
+    i = {"jsonrpc": "2.0", "method": "eth_getBlockReceipts", "params": [hex(block)], "id": 1}
+    data = json.dumps(i)
+    # print(data)
+    r = rpc_erigon(data)
+    # print(r)
     return r['result']
 
-def getTraceBlock(block):
-    i={"jsonrpc": "2.0", "method": "trace_block", "params": [hex(block)], "id": 1}
-    data=json.dumps(i)
-    #(data)
-    r=rpc_erigon(data)    
-    #print(r)
+
+def getTraceBlock(block, amb=False, blockObj=None):
+    # if amb:
+    #    return getTraceBlock_amb(block, blockObj)
+    i = {"jsonrpc": "2.0", "method": "trace_block", "params": [hex(block)], "id": 1}
+    data = json.dumps(i)
+    # print(data)
+    r = rpc_erigon(data)
+    # print(r)
     return r['result']
+
 
 def getLatestBlock():
-    i={"jsonrpc": "2.0", "method": "eth_subscribe", "params": ["newHeads"], "id": 1}
-    data=json.dumps(i)
-    #print(data)
-    r=rpc_erigon(data)    
-    #print(r)
-    n=int(r['result'],16)
+    i = {"jsonrpc": "2.0", "method": "eth_subscribe", "params": ["newHeads"], "id": 1}
+    data = json.dumps(i)
+    # print(data)
+    r = rpc_erigon(data)
+    # print(r)
+    n = int(r['result'], 16)
     return n
-      
