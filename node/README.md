@@ -14,10 +14,14 @@ For this blog post, follow below steps. We recommend the deployment via Copilot,
 - Deploy [CF template](scripts/network.yaml) with stack name "public-blockchain-data-network" and specify environment "test"
 
 ### 2. Setup of Cloud9 environment
-- Setup Cloud9 with name "copilot-test", instance type "m5.large", platform: "Ubuntu Server 18.04 LTS". In network settings, select VPC "digitalassets-test", select Subnet "test Public Subnet (AZ1)".
+- Setup Cloud9 with name "copilot-test", instance type "m4.large" or similar, platform: "Ubuntu Server 18.04 LTS". In network settings, select VPC "digitalassets-test", select Subnet "test Public Subnet (AZ1)".
 - Install Copilot 
 ```sh
 sudo curl -Lo /usr/local/bin/copilot https://github.com/aws/copilot-cli/releases/download/v1.21.0/copilot-linux && sudo chmod +x /usr/local/bin/copilot
+```
+- Install other libs
+```sh
+sudo apt-get install jq
 ```
 - Install Python 3.9
 ```sh
@@ -45,7 +49,7 @@ export COPILOT_APPLICATION_NAME=digital-assets
 export COPILOT_ENVIRONMENT_NAME=test
 ```
 ```sh
-. ~/.bashrc
+source ~/.bashrc
 ```
 - Create new IAM role "Cloud9Role", attach managed policy "AdministratorAccess". Assign Cloud9Role to EC2 Instance Role for Cloud9 environment. Disable "AWS managed temporary credentials" in Cloud 9/AWS Settings.
 - Configure AWS SDK, only specify AWS region.
@@ -67,12 +71,16 @@ copilot app init
 copilot env init
 ```
 - Specify "test" for Application name.
+```sh
+copilot env deploy --name test
+```
 
 ### 4. Setup of Bitcoin Node
 
 - Configure RPC authentication:
 ```sh
 cd $DIGITAL_ASSETS_HOME/node/copilot/bitcoin-node/
+chmod 777 *.sh
 ./init.sh
 ```
 - Setup and Deploy service "bitcoin-node" 
@@ -81,11 +89,6 @@ cd $DIGITAL_ASSETS_HOME/node/copilot/
 copilot svc init --name=bitcoin-node
 copilot svc deploy --name=bitcoin-node
 ```
-- Set BTC endpoint to "host:port"
-```sh
-cd $DIGITAL_ASSETS_HOME/base
-./set_endpoint.sh bitcoin {rpc-host}:8332 {listener-host}:28332
-```
 - Wait a few days until Bitcoin node has fully synced
 
 ### 5. Setup of Electrum Server (optional, only needed for electrum clients)
@@ -93,6 +96,7 @@ cd $DIGITAL_ASSETS_HOME/base
 - Configure SSL certs for "test" environment:
 ```sh
 cd $DIGITAL_ASSETS_HOME/node/copilot/electrum/
+chmod 777 *.sh
 ./init.sh test
 ```
 - Setup and Deploy service "electrum" 

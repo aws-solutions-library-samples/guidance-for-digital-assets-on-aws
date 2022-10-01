@@ -163,6 +163,8 @@ Resources:
               Type: bigint
             - Name: block_timestamp
               Type: timestamp
+            - Name: index
+              Type: bigint
             - Name: input_count
               Type: bigint
             - Name: output_count
