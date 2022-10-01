@@ -52,7 +52,7 @@ input | string | The data sent along with the transaction
 receipt_cumulative_gas_used | bigint | The total amount of gas used when this transaction was executed in the block
 receipt_gas_used | bigint | The amount of gas used by this specific transaction alone
 receipt_contract_address | string | The contract address created, if the transaction was a contract creation
-receipt_status | bigint | if the transaction was successful
+receipt_status | bigint | If the transaction was successful
 block_timestamp | timestamp | The unix timestamp for when the block was collated
 block_number | bigint | Block number where this transaction was in
 block_hash | string | Hash of the block
@@ -68,7 +68,7 @@ This table captures ERC-20 token transfers.
 Field | Type | Description 
 --- | --- | ---
 date | string | Partition column (YYYY-MM-DD)
-token_address | string | Uniqye token address
+token_address | string | Unique token address
 from_address | string | Sender address
 to_address | string | Recipient address
 value | double | Amount of token
