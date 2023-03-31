@@ -174,3 +174,8 @@ cd $DIGITAL_ASSETS_HOME/analytics/producer/copilot/ethereum-feed/
 python3 import.py
 ```
 - Wait until all historical data has been imported to S3
+
+### 9. Cleanup of resources
+- Empty and delete your S3 buckets
+- Delete all the CloudFormation stacks
+- Terminate Erigon EC2 instances
