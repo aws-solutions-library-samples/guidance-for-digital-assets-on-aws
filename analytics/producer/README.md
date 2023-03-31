@@ -100,6 +100,8 @@ chmod 777 *.sh
 ./set_endpoint.sh bitcoin {rpc-host}:8332 {listener-host}:28332
 ```
 - Wait a few days until Bitcoin node has fully synced
+- Open digital-assets-test-bitcoin-node task on ECS Console , click on logs tab and search for progress=1.000000 , If it is not equal to progress=1.000000 than the node is not fully scanned, wait for it to synced confirm progress=1.000000 before executing next steps
+
 
 ### 6. Setup of Bitcoin Worker and Feed
 
@@ -135,7 +137,8 @@ Note: Steps 7 and 8 are only required for Ethereum
 
 As the current feed requires an Ethereum node that supports batch apis, we'll use an Erigon node. Once this is supported on AMB Ethereum, we switch this to a managed node.
 
-- Setup [Erigon Node](https://github.com/ledgerwatch/erigon) and wait until node is fully synced. Disable "wss.compression" by adding flag "--wss.compression=false".
+- Setup [Erigon Node](https://github.com/ledgerwatch/erigon) and wait until node is fully synced. Disable "wss.compression" by adding flag "--wss.compression=false". For more detail instruction here is an example blog post that walk through step by step instruction https://chasewright.com/getting-started-with-turbo-geth-on-ubuntu/
+
 - For the initial import it is recommended to install at least 2 nodes in front of a NLB. You can point the "rpc:host" in the next step to the NLB and designate one of nodes as the "listener-host".
 - Set ETH endpoint to "host:port" for Erigon node
 ```sh
