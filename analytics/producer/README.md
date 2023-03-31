@@ -72,6 +72,7 @@ copilot env deploy --name test
 - Run the following commands:
 ```sh
 cd $DIGITAL_ASSETS_HOME/analytics/producer/scripts/
+chmod +x *.sh
 ./create_s3_bucket.sh
 ./set_s3_bucket.sh internal
 ```
