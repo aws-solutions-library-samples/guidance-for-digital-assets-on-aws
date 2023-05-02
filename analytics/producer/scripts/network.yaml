@@ -1,3 +1,6 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: This template installs all the network resources require to deploy for (SO9187).
+
 Parameters:
   EnvironmentName:
     Description: An environment name that will be prefixed to resource names
