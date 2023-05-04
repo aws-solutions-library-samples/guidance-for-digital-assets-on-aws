@@ -93,14 +93,16 @@ cd $DIGITAL_ASSETS_HOME/analytics/producer/copilot/
 copilot svc init --name=bitcoin-node
 copilot svc deploy --name=bitcoin-node
 ```
-- Set BTC endpoint to "host:port"
+- Wait a few days until Bitcoin node has fully synced
+- Open digital-assets-test-bitcoin-node task on ECS Console , click on logs tab and search for progress=1.000000 , If it is not equal to progress=1.000000 than the node is not fully scanned, wait for it to synced confirm progress=1.000000 before executing next steps
+- Get the private IP of the running Bitcoin node. To get the IP, click ECS cluster, go to Tasks tab, click the task with task definition ending in "bitcoin-node" and note down the private IP.
+- Set BTC endpoint to "host:port" and use the private IP from the previous step for the rpc-host and listener-host
 ```sh
 cd $DIGITAL_ASSETS_HOME/analytics/producer/scripts/
 chmod 777 *.sh
 ./set_endpoint.sh bitcoin {rpc-host}:8332 {listener-host}:28332
 ```
-- Wait a few days until Bitcoin node has fully synced
-- Open digital-assets-test-bitcoin-node task on ECS Console , click on logs tab and search for progress=1.000000 , If it is not equal to progress=1.000000 than the node is not fully scanned, wait for it to synced confirm progress=1.000000 before executing next steps
+
 
 
 ### 6. Setup of Bitcoin Worker and Feed
@@ -124,12 +126,12 @@ cd $DIGITAL_ASSETS_HOME/analytics/producer/copilot/
 copilot svc init --name=bitcoin-worker
 copilot svc deploy --name=bitcoin-worker
 ```
-- For initial historical import, run the following steps. 
+- After the bitcoin-worker is deployed, new data will come in every 10 min in the S3 bucket starting with "public-blockchain-data-databucket".
+- If you want to import all historical blocks, you can the following optional step. 
 ```sh
 cd $DIGITAL_ASSETS_HOME/analytics/producer/copilot/bitcoin-worker/
 python3 import.py
 ```
-- Wait until all historical data has been imported to S3
 
 Note: Steps 7 and 8 are only required for Ethereum
 
@@ -140,16 +142,11 @@ As the current feed requires an Ethereum node that supports batch apis, we'll us
 - Setup [Erigon Node](https://github.com/ledgerwatch/erigon) and wait until node is fully synced. Disable "wss.compression" by adding flag "--wss.compression=false". For more detail instruction here is an example blog post that walk through step by step instruction https://chasewright.com/getting-started-with-turbo-geth-on-ubuntu/
 
 - For the initial import it is recommended to install at least 2 nodes in front of a NLB. You can point the "rpc:host" in the next step to the NLB and designate one of nodes as the "listener-host".
-- Set ETH endpoint to "host:port" for Erigon node
+- Set ETH endpoint to "host:port" for Erigon node and replace rpc-host and listener-host in the following commands.
 ```sh
 cd $DIGITAL_ASSETS_HOME/analytics/producer/scripts/
 chmod 777 *.sh
 ./set_endpoint.sh ethereum {rpc-host}:8545 {listener-host}:8545
-```
-- Set https endpoint for AMB Ethereum node (optional, partially supported)
-```sh
-./set_endpoint_amb.sh {https-endpoint-url}
-```
 
 ### 8. Setup of Ethereum Worker and Feed
 
@@ -173,6 +170,7 @@ copilot svc deploy --name=ethereum-worker
 cd $DIGITAL_ASSETS_HOME/analytics/producer/copilot/ethereum-feed/
 python3 import.py
 ```
+- After ethereum-worker is deployed and command "python3 import.py" is executed, new data will start to come in after ~30 min in the S3 bucket starting with "public-blockchain-data-databucket" 
 - Wait until all historical data has been imported to S3
 
 ### 9. Cleanup of resources
