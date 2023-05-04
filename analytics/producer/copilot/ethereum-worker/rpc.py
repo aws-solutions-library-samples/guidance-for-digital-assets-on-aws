@@ -333,7 +333,7 @@ def getCredentials():
     return credentials
 
 
-credentials = getCredentials()
+credentials = {}
 
 envName = os.environ['COPILOT_ENVIRONMENT_NAME']
 
@@ -344,7 +344,10 @@ ETH_PORT = int(eth_endpoint[1])
 if 'AMB_ENDPOINT' in os.environ:
     ETH_AMB_REGION = os.environ['AWS_REGION']
     ETH_AMB_ENDPOINT = os.environ['AMB_ENDPOINT']
-
+    try:
+        credentials=getCredentials()
+    except Exception as e:
+        print(e)
 
 def rpc_amb(data):
     #print("rpc_amb:%s" % data)

@@ -41,6 +41,8 @@ If you want to use Redshift, you need to deploy it to ***us-east-2*** (or the re
 
 For SageMaker, we can use either Redshift or Athena to access the data. The provided examples use Athena to query the data in a Jupyter notebook. 
 
+If you use your own S3 bucket (bucket name starts with public-blockchain-data), please make sure to specify your S3 bucket as parameter in the following CloudFormation stack and change the region to your region.
+
 [Deploy CloudFormation Stack](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/new?stackName=aws-public-blockchain&templateURL=https://aws-blogs-artifacts-public.s3.amazonaws.com/artifacts/DBBLOG-2500/aws-public-blockchain.yaml)
 
  ## Amazon Athena
