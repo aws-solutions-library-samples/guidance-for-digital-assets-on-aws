@@ -178,7 +178,7 @@ Resources:
             - Name: fee
               Type: double
             - Name: inputs
-              Type: array<struct<index:bigint,spent_transaction_hash:string,spend_output_index:bigint,script_asm:string,script_hex:string,sequence:bigint,required_signatures:bigint,type:string,address:string,value:double>>
+              Type: array<struct<index:bigint,spent_transaction_hash:string,spent_output_index:bigint,script_asm:string,script_hex:string,sequence:bigint,required_signatures:bigint,type:string,address:string,value:double>>
             - Name: outputs
               Type: array<struct<index:bigint,script_asm:string,script_hex:string,required_signatures:bigint,type:string,address:string,value:double>>
           InputFormat: org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat

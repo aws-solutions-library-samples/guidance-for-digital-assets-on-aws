@@ -55,7 +55,7 @@ fee | | double | The fee paid by this transaction
 inputs | | array | Transaction inputs
 inputs | index | bigint | 0 indexed number of an input within a transaction
 inputs | spent_transaction_hash | string | The hash of the transaction which contains the output that this input spends
-inputs | spend_output_index | bigint | The index of the output this input spends
+inputs | spent_output_index | bigint | The index of the output this input spends
 inputs | script_asm | string | Symbolic representation of the bitcoins script language op-codes
 inputs | script_hex | string | Hexadecimal representation of the bitcoins script language op-codes
 inputs | sequence | bigint | A number intended to allow unconfirmed time-locked transactions to be updated before being finalized; not currently used except to disable locktime in a transaction
@@ -78,7 +78,7 @@ View for all inputs can be created from table transactions with the following st
 
 ```sql
 CREATE OR REPLACE VIEW btc.inputs AS (
-  SELECT t.date,t.block_hash,t.block_number,t.block_timestamp,t.hash AS transaction_hash,input.index,input.spent_transaction_hash,input.spend_output_index,input.script_asm,input.script_hex,input.sequence,input.required_signatures,input.type,input.address,input.value FROM btc.transactions t,UNNEST(t.inputs) AS t(input)
+  SELECT t.date,t.block_hash,t.block_number,t.block_timestamp,t.hash AS transaction_hash,input.index,input.spent_transaction_hash,input.spent_output_index,input.script_asm,input.script_hex,input.sequence,input.required_signatures,input.type,input.address,input.value FROM btc.transactions t,UNNEST(t.inputs) AS t(input)
 )
 ```
 
