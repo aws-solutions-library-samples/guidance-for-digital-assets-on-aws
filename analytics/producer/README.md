@@ -147,6 +147,7 @@ As the current feed requires an Ethereum node that supports batch apis, we'll us
 cd $DIGITAL_ASSETS_HOME/analytics/producer/scripts/
 chmod 777 *.sh
 ./set_endpoint.sh ethereum {rpc-host}:8545 {listener-host}:8545
+export ETH_ENDPOINT={listener-host}:8545
 
 ### 8. Setup of Ethereum Worker and Feed
 
